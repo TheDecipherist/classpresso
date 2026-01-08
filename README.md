@@ -231,13 +231,16 @@ module.exports = {
   hashPrefix: 'cp-',    // Prefix for consolidated classes
   hashLength: 5,        // Hash length (5 = 1M+ unique combinations)
 
-  // Classes to exclude from consolidation
+  // Classes to exclude from consolidation (safelist)
   exclude: {
     prefixes: ['js-', 'data-', 'hook-', 'track-'],
     suffixes: ['-handler', '-trigger'],
     classes: ['no-consolidate'],
     patterns: [/^qa-/, /^test-/, /^e2e-/],
   },
+
+  // CSS output options
+  cssLayer: false,      // Wrap in @layer (e.g., 'utilities') or false for none
 
   // Output options
   manifest: true,       // Generate manifest.json
@@ -331,7 +334,7 @@ async function optimize() {
   const mappings = createClassMappings(candidates);
 
   // Generate CSS
-  const css = await generateConsolidatedCSS(mappings, config.buildDir);
+  const css = await generateConsolidatedCSS(mappings, config.buildDir, config.cssLayer);
 
   // Transform build
   await transformBuildOutput(mappings, config);
