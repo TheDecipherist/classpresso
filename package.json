@@ -1,6 +1,6 @@
 {
   "name": "classpresso",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "CSS class consolidation tool - compress multiple utility classes into single optimized classes",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -38,7 +38,8 @@
   },
   "files": [
     "dist",
-    "bin"
+    "bin",
+    "AI-INSTRUCTIONS.md"
   ],
   "scripts": {
     "build": "tsup",
