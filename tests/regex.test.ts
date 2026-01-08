@@ -136,7 +136,8 @@ describe('CLASS_PATTERNS', () => {
 describe('createReplacementPatterns', () => {
   it('creates patterns for all variants', () => {
     const patterns = createReplacementPatterns('flex gap-2');
-    expect(patterns).toHaveLength(7);
+    // 7 base patterns + 2 HTML entity encoded patterns
+    expect(patterns).toHaveLength(9);
   });
 
   it('creates working JSX double quote pattern', () => {

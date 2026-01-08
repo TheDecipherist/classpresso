@@ -8,6 +8,7 @@ import {
   normalizeClassString,
   extractClassStrings,
 } from '../src/core/scanner.js';
+import { extractDynamicBaseStrings } from '../src/utils/regex.js';
 import type { ExcludeConfig } from '../src/types/index.js';
 
 describe('shouldExcludeClass', () => {
@@ -105,5 +106,41 @@ describe('extractClassStrings', () => {
     `;
     const result = extractClassStrings(content, 'test.tsx');
     expect(result).toHaveLength(2);
+  });
+});
+
+describe('extractDynamicBaseStrings (hydration safety)', () => {
+  it('extracts base classes from template literals with dynamic suffix', () => {
+    const content = 'className:`px-4 py-2 ${active ? "bg-blue" : "bg-red"}`';
+    const result = extractDynamicBaseStrings(content);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toBe('px-4 py-2');
+  });
+
+  it('extracts from JSX template literal syntax', () => {
+    const content = 'className=`flex items-center ${isOpen ? "visible" : "hidden"}`';
+    const result = extractDynamicBaseStrings(content);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toBe('flex items-center');
+  });
+
+  it('handles minified JS with multiple patterns', () => {
+    const content = `
+      className:\`px-4 py-2 \${a}\`,className:\`text-lg font-bold \${b}\`
+    `;
+    const result = extractDynamicBaseStrings(content);
+    expect(result).toHaveLength(2);
+  });
+
+  it('ignores static template literals', () => {
+    const content = 'className:`static-class another-class`';
+    const result = extractDynamicBaseStrings(content);
+    expect(result).toHaveLength(0);
+  });
+
+  it('ignores regular string class attributes', () => {
+    const content = 'className="flex gap-2"';
+    const result = extractDynamicBaseStrings(content);
+    expect(result).toHaveLength(0);
   });
 });

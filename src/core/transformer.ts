@@ -2,7 +2,7 @@
  * Transformer - Replaces class patterns in build output
  */
 
-import type { ClassMapping, TransformResult, ClasspressoConfig } from '../types/index.js';
+import type { ClassMapping, TransformResult, ClasspressoConfig, DynamicBasePattern } from '../types/index.js';
 import {
   findFiles,
   readFileContent,
@@ -19,6 +19,48 @@ import { normalizeClassString } from './scanner.js';
 interface MatchPattern {
   regex: RegExp;
   supportsDataAttr: boolean;
+}
+
+/**
+ * Check if a set of classes is a superset of any dynamic base pattern
+ * This helps prevent hydration mismatches in React/Next.js
+ */
+function isSupersetOfDynamicBase(
+  classes: string[],
+  dynamicBasePatterns: Map<string, DynamicBasePattern>
+): boolean {
+  const classSet = new Set(classes);
+
+  for (const [, pattern] of dynamicBasePatterns) {
+    // Check if all base classes are present in the target classes
+    const allBasePresent = pattern.baseClasses.every(cls => classSet.has(cls));
+
+    // If all base classes are present and target has MORE classes, it's a superset
+    if (allBasePresent && classes.length > pattern.baseClasses.length) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if a set of classes exactly matches any dynamic base pattern
+ */
+function matchesDynamicBase(
+  classes: string[],
+  dynamicBasePatterns: Map<string, DynamicBasePattern>
+): boolean {
+  const classSet = new Set(classes);
+
+  for (const [, pattern] of dynamicBasePatterns) {
+    if (classes.length !== pattern.baseClasses.length) continue;
+
+    const allMatch = pattern.baseClasses.every(cls => classSet.has(cls));
+    if (allMatch) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -158,14 +200,36 @@ async function transformFile(
   filePath: string,
   mappings: ClassMapping[],
   config: ClasspressoConfig,
-  dryRun: boolean
-): Promise<{ modified: boolean; replacements: number; error?: string }> {
+  dryRun: boolean,
+  dynamicBasePatterns: Map<string, DynamicBasePattern>
+): Promise<{ modified: boolean; replacements: number; skippedForHydration: number; error?: string }> {
   try {
     let content = await readFileContent(filePath);
     let totalReplacements = 0;
+    let skippedForHydration = 0;
     const originalContent = content;
 
+    const isHTML = isHTMLFile(filePath);
+    const isJS = isJSFile(filePath);
+
     for (const mapping of mappings) {
+      // Skip patterns that would cause hydration mismatches
+      if (dynamicBasePatterns.size > 0) {
+        // For HTML files: skip if the pattern is a superset of a dynamic base
+        // This prevents transforming "px-4 py-2 bg-blue" in HTML when JS has "px-4 py-2 ${dynamic}"
+        if (isHTML && isSupersetOfDynamicBase(mapping.classes, dynamicBasePatterns)) {
+          skippedForHydration++;
+          continue;
+        }
+
+        // For JS files: skip if the pattern exactly matches a dynamic base
+        // This prevents transforming the static base of template literals
+        if (isJS && matchesDynamicBase(mapping.classes, dynamicBasePatterns)) {
+          skippedForHydration++;
+          continue;
+        }
+      }
+
       // Find all variations of this pattern in the file
       const variations = findClassVariations(content, mapping, config);
 
@@ -192,11 +256,12 @@ async function transformFile(
       await writeFileContent(filePath, content);
     }
 
-    return { modified, replacements: totalReplacements };
+    return { modified, replacements: totalReplacements, skippedForHydration };
   } catch (err) {
     return {
       modified: false,
       replacements: 0,
+      skippedForHydration: 0,
       error: `Error transforming ${filePath}: ${err}`,
     };
   }
@@ -208,13 +273,15 @@ async function transformFile(
 export async function transformBuildOutput(
   mappings: ClassMapping[],
   config: ClasspressoConfig,
-  dryRun: boolean = false
+  dryRun: boolean = false,
+  dynamicBasePatterns: Map<string, DynamicBasePattern> = new Map()
 ): Promise<TransformResult> {
   const patterns = config.include.length > 0 ? config.include : DEFAULT_PATTERNS;
   const files = await findFiles(config.buildDir, patterns);
 
   let filesModified = 0;
   let totalBytesChanged = 0;
+  let totalSkippedForHydration = 0;
   const errors: string[] = [];
 
   for (const filePath of files) {
@@ -223,7 +290,7 @@ export async function transformBuildOutput(
       continue;
     }
 
-    const result = await transformFile(filePath, mappings, config, dryRun);
+    const result = await transformFile(filePath, mappings, config, dryRun, dynamicBasePatterns);
 
     if (result.error) {
       errors.push(result.error);
@@ -234,6 +301,12 @@ export async function transformBuildOutput(
       // Estimate bytes changed based on replacements
       totalBytesChanged += result.replacements * 10; // Rough estimate
     }
+
+    totalSkippedForHydration += result.skippedForHydration;
+  }
+
+  if (config.verbose && totalSkippedForHydration > 0) {
+    console.log(`Skipped ${totalSkippedForHydration} pattern transformations to prevent hydration mismatches`);
   }
 
   return {

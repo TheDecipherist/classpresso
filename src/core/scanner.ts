@@ -8,6 +8,7 @@ import type {
   FileLocation,
   ScanResult,
   FileStats,
+  DynamicBasePattern,
 } from '../types/index.js';
 import {
   findFiles,
@@ -18,7 +19,7 @@ import {
   isRSCFile,
   DEFAULT_PATTERNS,
 } from '../utils/files.js';
-import { ALL_CLASS_PATTERNS, isDynamicClassString } from '../utils/regex.js';
+import { ALL_CLASS_PATTERNS, isDynamicClassString, extractDynamicBaseStrings } from '../utils/regex.js';
 
 /**
  * Check if a class should be excluded based on config
@@ -141,6 +142,7 @@ export async function scanBuildOutput(
   config: ClasspressoConfig
 ): Promise<ScanResult> {
   const occurrences = new Map<string, ClassOccurrence>();
+  const dynamicBasePatterns = new Map<string, DynamicBasePattern>();
   const fileStats: FileStats[] = [];
   const errors: string[] = [];
 
@@ -167,6 +169,29 @@ export async function scanBuildOutput(
         originalSize: size,
         modified: false,
       });
+
+      // Extract dynamic base patterns from JS files (for hydration safety)
+      if (isJSFile(filePath)) {
+        const dynamicBases = extractDynamicBaseStrings(content);
+        for (const baseString of dynamicBases) {
+          const { normalized, classes } = normalizeClassString(baseString, config.exclude);
+
+          // Skip if too few classes
+          if (classes.length < config.minClasses) continue;
+
+          const location: FileLocation = { filePath };
+
+          if (dynamicBasePatterns.has(normalized)) {
+            dynamicBasePatterns.get(normalized)!.locations.push(location);
+          } else {
+            dynamicBasePatterns.set(normalized, {
+              baseClasses: classes,
+              normalizedKey: normalized,
+              locations: [location],
+            });
+          }
+        }
+      }
 
       const classStrings = extractClassStrings(content, filePath);
 
@@ -206,5 +231,6 @@ export async function scanBuildOutput(
     occurrences,
     files: fileStats,
     errors,
+    dynamicBasePatterns,
   };
 }

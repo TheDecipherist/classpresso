@@ -122,11 +122,23 @@ export interface FileStats {
   modified: boolean;
 }
 
+// Dynamic base pattern from template literals (for hydration safety)
+export interface DynamicBasePattern {
+  /** The static class string before the dynamic ${} expression */
+  baseClasses: string[];
+  /** Normalized (sorted) version for comparison */
+  normalizedKey: string;
+  /** File locations where this pattern was found */
+  locations: FileLocation[];
+}
+
 // Scan result
 export interface ScanResult {
   occurrences: Map<string, ClassOccurrence>;
   files: FileStats[];
   errors: string[];
+  /** Dynamic base patterns from JS template literals (className:`base ${dynamic}`) */
+  dynamicBasePatterns: Map<string, DynamicBasePattern>;
 }
 
 // Transform result

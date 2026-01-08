@@ -17,6 +17,7 @@ export type {
   ScanResult,
   TransformResult,
   FileStats,
+  DynamicBasePattern,
 } from './types/index.js';
 
 // Core functions
@@ -32,5 +33,5 @@ export { loadConfig, validateConfig, DEFAULT_CONFIG } from './config.js';
 
 // Utilities
 export { generateHashName, resolveCollisions } from './utils/hash.js';
-export { escapeRegex, isDynamicClassString, CLASS_PATTERNS, ALL_CLASS_PATTERNS } from './utils/regex.js';
+export { escapeRegex, isDynamicClassString, extractDynamicBaseStrings, CLASS_PATTERNS, ALL_CLASS_PATTERNS, DYNAMIC_BASE_PATTERNS } from './utils/regex.js';
 export { findFiles, readFileContent, writeFileContent, getFileSize, backupFile, DEFAULT_PATTERNS } from './utils/files.js';

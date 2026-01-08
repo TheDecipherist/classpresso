@@ -76,6 +76,42 @@ export function isDynamicClassString(classString: string): boolean {
 }
 
 /**
+ * Patterns to extract the static base portion of template literal class names
+ * These capture the static classes before the ${...} dynamic expression
+ */
+export const DYNAMIC_BASE_PATTERNS = [
+  // className:`base classes ${...}`
+  /className\s*:\s*`([^`$]+)\s*\$\{/g,
+  // className=`base classes ${...}` (JSX)
+  /className\s*=\s*`([^`$]+)\s*\$\{/g,
+  // class:`base classes ${...}` (rare but possible)
+  /\bclass\s*:\s*`([^`$]+)\s*\$\{/g,
+];
+
+/**
+ * Extract static base patterns from template literals with dynamic expressions
+ * Returns the static class portion before ${...}
+ */
+export function extractDynamicBaseStrings(
+  content: string
+): string[] {
+  const results: string[] = [];
+
+  for (const pattern of DYNAMIC_BASE_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      const baseString = match[1]?.trim();
+      if (baseString && baseString.length > 0) {
+        results.push(baseString);
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
  * Create a replacement pattern for a class string
  */
 export function createReplacementPatterns(original: string): RegExp[] {
