@@ -1,6 +1,6 @@
 {
   "name": "classpresso",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "CSS class consolidation tool - compress multiple utility classes into single optimized classes",
   "type": "module",
   "main": "./dist/index.cjs",
