@@ -7,8 +7,10 @@ import {
   shouldExcludeClass,
   normalizeClassString,
   extractClassStrings,
+  containsDynamicPrefix,
 } from '../src/core/scanner.js';
 import { extractDynamicBaseStrings } from '../src/utils/regex.js';
+import { DEFAULT_DYNAMIC_PREFIXES } from '../src/config.js';
 import type { ExcludeConfig } from '../src/types/index.js';
 
 describe('shouldExcludeClass', () => {
@@ -142,5 +144,71 @@ describe('extractDynamicBaseStrings (hydration safety)', () => {
     const content = 'className="flex gap-2"';
     const result = extractDynamicBaseStrings(content);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('containsDynamicPrefix', () => {
+  it('detects lucide-react icon classes', () => {
+    const classes = ['lucide', 'lucide-github', 'h-4', 'w-4'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('detects Font Awesome classes', () => {
+    const classes = ['fa-github', 'fa-lg'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+
+    const classes2 = ['fas', 'fa-check'];
+    expect(containsDynamicPrefix(classes2, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+
+    const classes3 = ['far', 'fa-circle'];
+    expect(containsDynamicPrefix(classes3, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('detects heroicon classes', () => {
+    const classes = ['heroicon', 'heroicon-outline', 'h-5', 'w-5'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('detects material icons classes', () => {
+    const classes = ['material-icons', 'text-base'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+
+    const classes2 = ['mdi-home', 'text-lg'];
+    expect(containsDynamicPrefix(classes2, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('detects Bootstrap Icons classes', () => {
+    const classes = ['bi-github', 'text-xl'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('detects Remix Icons classes', () => {
+    const classes = ['ri-home-line', 'text-2xl'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(true);
+  });
+
+  it('returns false for regular utility classes', () => {
+    const classes = ['flex', 'gap-2', 'items-center', 'px-4', 'py-2'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(false);
+  });
+
+  it('returns false for Tailwind classes that look similar', () => {
+    // "fab" without a dash is Font Awesome, but "fabric" is not
+    const classes = ['fabric-button', 'text-primary'];
+    expect(containsDynamicPrefix(classes, DEFAULT_DYNAMIC_PREFIXES)).toBe(false);
+  });
+
+  it('works with custom prefixes', () => {
+    const customPrefixes = ['my-icon-', 'custom-'];
+    const classes = ['my-icon-home', 'text-lg'];
+    expect(containsDynamicPrefix(classes, customPrefixes)).toBe(true);
+
+    const classes2 = ['flex', 'gap-2'];
+    expect(containsDynamicPrefix(classes2, customPrefixes)).toBe(false);
+  });
+
+  it('handles empty arrays', () => {
+    expect(containsDynamicPrefix([], DEFAULT_DYNAMIC_PREFIXES)).toBe(false);
+    expect(containsDynamicPrefix(['flex'], [])).toBe(false);
   });
 });

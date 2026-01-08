@@ -26,6 +26,10 @@ export interface ClasspressoConfig {
   verbose: boolean;
   /** Force consolidation of all patterns regardless of byte savings (for React hydration consistency) */
   forceAll: boolean;
+  /** Skip patterns containing classes from dynamic libraries like lucide-react, heroicons, etc. (default: true) */
+  excludeDynamicPatterns: boolean;
+  /** Prefixes that indicate dynamically-generated classes (e.g., 'lucide', 'fa-', 'heroicon') */
+  dynamicPrefixes: string[];
 }
 
 // File location tracking

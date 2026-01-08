@@ -21,7 +21,7 @@ export type {
 } from './types/index.js';
 
 // Core functions
-export { scanBuildOutput, normalizeClassString, shouldExcludeClass } from './core/scanner.js';
+export { scanBuildOutput, normalizeClassString, shouldExcludeClass, containsDynamicPrefix } from './core/scanner.js';
 export { detectConsolidatablePatterns, getPatternSummary } from './core/pattern-detector.js';
 export { createClassMappings, saveMappingManifest, loadMappingManifest, buildReplacementMap } from './core/consolidator.js';
 export { generateConsolidatedCSS, injectConsolidatedCSS, parseUtilityClass } from './core/css-generator.js';
@@ -29,7 +29,7 @@ export { transformBuildOutput } from './core/transformer.js';
 export { calculateMetrics, estimateCSSOverhead, formatBytes, formatPercentage, formatTime } from './core/metrics.js';
 
 // Configuration
-export { loadConfig, validateConfig, DEFAULT_CONFIG } from './config.js';
+export { loadConfig, validateConfig, DEFAULT_CONFIG, DEFAULT_DYNAMIC_PREFIXES } from './config.js';
 
 // Utilities
 export { generateHashName, resolveCollisions } from './utils/hash.js';

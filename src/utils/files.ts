@@ -18,12 +18,16 @@ export const DEFAULT_PATTERNS = [
   'server/app/**/*.js',
   'server/app/**/*.html',
   'server/app/**/*.rsc',
+  // Server chunks (contains Client Component code used for hydration)
+  'server/chunks/**/*.js',
   // Standalone build (Next.js output: 'standalone')
   'standalone/.next/static/chunks/**/*.js',
   'standalone/.next/static/css/**/*.css',
   'standalone/.next/server/app/**/*.js',
   'standalone/.next/server/app/**/*.html',
   'standalone/.next/server/app/**/*.rsc',
+  // Standalone server chunks (Client Components)
+  'standalone/.next/server/chunks/**/*.js',
 ];
 
 /**

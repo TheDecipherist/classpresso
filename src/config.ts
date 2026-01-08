@@ -7,6 +7,26 @@ import path from 'path';
 import type { ClasspressoConfig } from './types/index.js';
 
 /**
+ * Default prefixes that indicate dynamically-generated classes from icon/component libraries.
+ * Patterns containing these will be skipped to prevent hydration mismatches.
+ */
+export const DEFAULT_DYNAMIC_PREFIXES = [
+  'lucide',      // lucide-react icons
+  'heroicon',    // heroicons
+  'icon-',       // generic icon patterns
+  'fa-',         // Font Awesome
+  'fas',         // Font Awesome solid
+  'far',         // Font Awesome regular
+  'fab',         // Font Awesome brands
+  'material-icons', // Material Design Icons
+  'mdi-',        // Material Design Icons (alternative)
+  'ri-',         // Remix Icons
+  'bi-',         // Bootstrap Icons
+  'tabler-',     // Tabler Icons
+  'phosphor-',   // Phosphor Icons
+];
+
+/**
  * Default configuration
  */
 export const DEFAULT_CONFIG: ClasspressoConfig = {
@@ -29,6 +49,8 @@ export const DEFAULT_CONFIG: ClasspressoConfig = {
   backup: false,
   verbose: false,
   forceAll: false,
+  excludeDynamicPatterns: true,
+  dynamicPrefixes: DEFAULT_DYNAMIC_PREFIXES,
 };
 
 /**
@@ -100,6 +122,11 @@ function mergeConfig(
         ...(userConfig.exclude?.patterns || []),
       ],
     },
+    // Merge dynamicPrefixes arrays
+    dynamicPrefixes: [
+      ...(defaults.dynamicPrefixes || []),
+      ...(userConfig.dynamicPrefixes || []),
+    ],
   };
 }
 

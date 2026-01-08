@@ -22,6 +22,34 @@ import {
 import { ALL_CLASS_PATTERNS, isDynamicClassString, extractDynamicBaseStrings } from '../utils/regex.js';
 
 /**
+ * Check if any class in a list contains a dynamic library prefix.
+ * These are classes generated at runtime by libraries like lucide-react, heroicons, etc.
+ */
+export function containsDynamicPrefix(
+  classes: string[],
+  dynamicPrefixes: string[]
+): boolean {
+  for (const cls of classes) {
+    for (const prefix of dynamicPrefixes) {
+      // For prefixes ending with '-' (e.g., "fa-", "icon-"), just check startsWith
+      if (prefix.endsWith('-')) {
+        if (cls.startsWith(prefix)) {
+          return true;
+        }
+      } else {
+        // For prefixes without '-' (e.g., "lucide", "fas", "far", "fab"),
+        // match exact or followed by '-' to avoid false positives
+        // e.g., "fab" matches "fab" or "fab-icon", but not "fabric"
+        if (cls === prefix || cls.startsWith(prefix + '-')) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Check if a class should be excluded based on config
  */
 export function shouldExcludeClass(
@@ -206,6 +234,12 @@ export async function scanBuildOutput(
 
         // Skip single classes (no benefit to consolidate)
         if (classes.length < config.minClasses) continue;
+
+        // Skip patterns containing dynamic library prefixes (e.g., lucide-react, heroicons)
+        // These are generated at runtime and transforming them causes hydration mismatches
+        if (config.excludeDynamicPatterns && containsDynamicPrefix(classes, config.dynamicPrefixes)) {
+          continue;
+        }
 
         if (occurrences.has(normalized)) {
           const existing = occurrences.get(normalized)!;
