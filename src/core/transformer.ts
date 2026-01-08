@@ -209,22 +209,21 @@ async function transformFile(
     let skippedForHydration = 0;
     const originalContent = content;
 
-    const isHTML = isHTMLFile(filePath);
-    const isJS = isJSFile(filePath);
-
     for (const mapping of mappings) {
       // Skip patterns that would cause hydration mismatches
       if (dynamicBasePatterns.size > 0) {
-        // For HTML files: skip if the pattern is a superset of a dynamic base
-        // This prevents transforming "px-4 py-2 bg-blue" in HTML when JS has "px-4 py-2 ${dynamic}"
-        if (isHTML && isSupersetOfDynamicBase(mapping.classes, dynamicBasePatterns)) {
+        // Skip if the pattern is a superset of OR exactly matches a dynamic base
+        // This prevents hydration mismatches in React/Next.js where:
+        // - HTML has rendered result: "px-4 py-2 bg-blue" (superset of base)
+        // - JS has template literal: `px-4 py-2 ${dynamic}` (base pattern)
+        // - Static JS may also have: "px-4 py-2 bg-blue" (same as HTML)
+        // All must stay untransformed to match at hydration time
+        if (isSupersetOfDynamicBase(mapping.classes, dynamicBasePatterns)) {
           skippedForHydration++;
           continue;
         }
 
-        // For JS files: skip if the pattern exactly matches a dynamic base
-        // This prevents transforming the static base of template literals
-        if (isJS && matchesDynamicBase(mapping.classes, dynamicBasePatterns)) {
+        if (matchesDynamicBase(mapping.classes, dynamicBasePatterns)) {
           skippedForHydration++;
           continue;
         }
