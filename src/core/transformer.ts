@@ -16,27 +16,32 @@ import {
 import { escapeRegex } from '../utils/regex.js';
 import { normalizeClassString } from './scanner.js';
 
+interface MatchPattern {
+  regex: RegExp;
+  supportsDataAttr: boolean;
+}
+
 /**
  * Build a regex pattern to match a class string in various contexts
  */
-function buildMatchPatterns(classString: string): RegExp[] {
+function buildMatchPatterns(classString: string): MatchPattern[] {
   const escaped = escapeRegex(classString);
 
   return [
-    // className="..." (JSX/HTML)
-    new RegExp(`(className\\s*=\\s*")${escaped}(")`,'g'),
-    new RegExp(`(className\\s*=\\s*')${escaped}(')`,'g'),
+    // className="..." (JSX/HTML) - supports data attributes
+    { regex: new RegExp(`(className\\s*=\\s*")${escaped}(")`,'g'), supportsDataAttr: true },
+    { regex: new RegExp(`(className\\s*=\\s*')${escaped}(')`,'g'), supportsDataAttr: true },
 
-    // className:"..." (React createElement)
-    new RegExp(`(className\\s*:\\s*")${escaped}(")`,'g'),
-    new RegExp(`(className\\s*:\\s*')${escaped}(')`,'g'),
+    // className:"..." (React createElement) - no data attr support
+    { regex: new RegExp(`(className\\s*:\\s*")${escaped}(")`,'g'), supportsDataAttr: false },
+    { regex: new RegExp(`(className\\s*:\\s*')${escaped}(')`,'g'), supportsDataAttr: false },
 
-    // "className","..." (minified)
-    new RegExp(`("className"\\s*,\\s*")${escaped}(")`,'g'),
+    // "className","..." (minified) - no data attr support
+    { regex: new RegExp(`("className"\\s*,\\s*")${escaped}(")`,'g'), supportsDataAttr: false },
 
-    // class="..." (HTML)
-    new RegExp(`(\\bclass\\s*=\\s*")${escaped}(")`,'g'),
-    new RegExp(`(\\bclass\\s*=\\s*')${escaped}(')`,'g'),
+    // class="..." (HTML) - supports data attributes
+    { regex: new RegExp(`(\\bclass\\s*=\\s*")${escaped}(")`,'g'), supportsDataAttr: true },
+    { regex: new RegExp(`(\\bclass\\s*=\\s*')${escaped}(')`,'g'), supportsDataAttr: true },
   ];
 }
 
@@ -47,7 +52,9 @@ function replacePattern(
   content: string,
   originalClasses: string,
   consolidated: string,
-  excludedClasses: string[]
+  excludedClasses: string[],
+  originalClassList: string[],
+  addDataAttributes: boolean
 ): { content: string; replacements: number } {
   let replacements = 0;
   let result = content;
@@ -57,12 +64,18 @@ function replacePattern(
     ? `${consolidated} ${excludedClasses.join(' ')}`
     : consolidated;
 
+  // Build the data attribute string
+  const dataAttr = addDataAttributes
+    ? ` data-cp-original="${originalClassList.join(' ')}"`
+    : '';
+
   // Try exact match first
   const patterns = buildMatchPatterns(originalClasses);
 
-  for (const pattern of patterns) {
+  for (const { regex: pattern, supportsDataAttr } of patterns) {
     const beforeLength = result.length;
-    result = result.replace(pattern, `$1${replacement}$2`);
+    const suffix = (addDataAttributes && supportsDataAttr) ? dataAttr : '';
+    result = result.replace(pattern, `$1${replacement}$2${suffix}`);
     if (result.length !== beforeLength) {
       // Count replacements (approximate)
       const matches = content.match(pattern);
@@ -138,7 +151,9 @@ async function transformFile(
           content,
           variation,
           mapping.consolidated,
-          mapping.excludedClasses
+          mapping.excludedClasses,
+          mapping.classes,
+          config.dataAttributes
         );
         content = newContent;
         totalReplacements += replacements;

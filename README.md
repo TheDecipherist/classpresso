@@ -242,6 +242,9 @@ module.exports = {
   // CSS output options
   cssLayer: false,      // Wrap in @layer (e.g., 'utilities') or false for none
 
+  // Debug options
+  dataAttributes: false, // Add data-cp-original attribute with original classes
+
   // Output options
   manifest: true,       // Generate manifest.json
   backup: false,        // Create .bak files

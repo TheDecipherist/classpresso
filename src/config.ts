@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG: ClasspressoConfig = {
   },
   include: [],
   cssLayer: false,
+  dataAttributes: false,
   manifest: true,
   backup: false,
   verbose: false,

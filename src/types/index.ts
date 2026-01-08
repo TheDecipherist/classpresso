@@ -20,6 +20,7 @@ export interface ClasspressoConfig {
   exclude: ExcludeConfig;
   include: string[];
   cssLayer?: string | false;
+  dataAttributes: boolean;
   manifest: boolean;
   backup: boolean;
   verbose: boolean;
