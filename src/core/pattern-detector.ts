@@ -9,6 +9,7 @@ import type {
 } from '../types/index.js';
 import { generateHashName, resolveCollisions } from '../utils/hash.js';
 import { calculatePatternCSSOverhead } from './metrics.js';
+import { isHydrationSafe } from './scanner.js';
 
 /**
  * Calculate bytes saved by consolidating a pattern
@@ -52,6 +53,12 @@ export function detectConsolidatablePatterns(
 
     // Filter by minimum classes
     if (occurrence.classes.length < config.minClasses) continue;
+
+    // SSR mode: only transform patterns found in BOTH server and client contexts
+    // This prevents React hydration mismatches
+    if (config.ssr && !isHydrationSafe(occurrence)) {
+      continue;
+    }
 
     // Skip patterns that have excluded classes if skipPatternsWithExcludedClasses is enabled
     // This prevents issues like "hidden md:flex" becoming "_cp-xxx md:flex" where

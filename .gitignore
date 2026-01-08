@@ -28,3 +28,4 @@ coverage/
 # Backup files
 *.bak
 *.classpresso-backup
+test-site/

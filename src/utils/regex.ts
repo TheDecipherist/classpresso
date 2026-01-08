@@ -39,6 +39,9 @@ export const CLASS_PATTERNS = {
 
   // HTML entity encoded: class=&#34;...&#34; (numeric entity)
   htmlNumericDouble: /\bclass=&#34;([^&]+)&#34;/g,
+
+  // RSC payload: \"className\":\"...\" (escaped JSON in Next.js RSC payloads)
+  rscPayload: /\\"className\\"\s*:\s*\\"([^"\\]+)\\"/g,
 };
 
 /**
@@ -54,6 +57,7 @@ export const ALL_CLASS_PATTERNS = [
   CLASS_PATTERNS.htmlSingle,
   CLASS_PATTERNS.htmlEntityDouble,
   CLASS_PATTERNS.htmlNumericDouble,
+  CLASS_PATTERNS.rscPayload,
 ];
 
 /**
@@ -87,6 +91,39 @@ export const DYNAMIC_BASE_PATTERNS = [
   // class:`base classes ${...}` (rare but possible)
   /\bclass\s*:\s*`([^`$]+)\s*\$\{/g,
 ];
+
+/**
+ * Patterns to extract the static base portion of .concat() calls
+ * Minified React often uses "".concat("base", " ", variant) for className
+ * These are treated as dynamic and should be skipped
+ */
+export const CONCAT_BASE_PATTERNS = [
+  // className:"".concat("base classes",...) - the base before concat
+  /className\s*:\s*""\s*\.concat\s*\(\s*"([^"]+)"/g,
+  // className:''.concat('base classes',...)
+  /className\s*:\s*''\s*\.concat\s*\(\s*'([^']+)'/g,
+];
+
+/**
+ * Extract static base patterns from .concat() calls
+ * Returns the static class portion from the first concat argument
+ */
+export function extractConcatBaseStrings(content: string): string[] {
+  const results: string[] = [];
+
+  for (const pattern of CONCAT_BASE_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      const baseString = match[1]?.trim();
+      if (baseString && baseString.length > 0) {
+        results.push(baseString);
+      }
+    }
+  }
+
+  return results;
+}
 
 /**
  * Extract static base patterns from template literals with dynamic expressions

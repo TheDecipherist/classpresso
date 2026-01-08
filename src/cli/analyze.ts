@@ -13,6 +13,7 @@ interface AnalyzeOptions {
   dir: string;
   minOccurrences: string;
   minClasses: string;
+  ssr?: boolean;
   json?: boolean;
   verbose?: boolean;
 }
@@ -24,6 +25,7 @@ export async function analyzeCommand(options: AnalyzeOptions): Promise<void> {
   config.minOccurrences = parseInt(options.minOccurrences, 10);
   config.minClasses = parseInt(options.minClasses, 10);
   config.verbose = options.verbose || false;
+  config.ssr = options.ssr || false;
 
   if (!options.json) {
     console.log(chalk.cyan('\n☕ Classpresso - Analyzing build output...\n'));

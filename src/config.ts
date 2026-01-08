@@ -53,6 +53,7 @@ export const DEFAULT_CONFIG: ClasspressoConfig = {
   excludeDynamicPatterns: true,
   dynamicPrefixes: DEFAULT_DYNAMIC_PREFIXES,
   skipPatternsWithExcludedClasses: true,
+  ssr: false,
 };
 
 /**

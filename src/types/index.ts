@@ -36,6 +36,10 @@ export interface ClasspressoConfig {
    * When true, patterns like "hidden md:flex" won't be consolidated at all if md:flex is excluded
    * When false, excluded classes are preserved separately: "hidden md:flex" -> "_cp-xxx md:flex" */
   skipPatternsWithExcludedClasses: boolean;
+  /** Enable SSR-safe mode for frameworks like Next.js (default: false)
+   * When true, only transforms patterns found in BOTH HTML/RSC AND JS contexts
+   * to prevent React hydration mismatches */
+  ssr: boolean;
 }
 
 // File location tracking

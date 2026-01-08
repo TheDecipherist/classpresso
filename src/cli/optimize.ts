@@ -16,6 +16,7 @@ interface OptimizeOptions {
   dir: string;
   minOccurrences: string;
   minClasses: string;
+  ssr?: boolean;
   dryRun?: boolean;
   backup?: boolean;
   manifest?: boolean;
@@ -28,6 +29,7 @@ export async function optimizeCommand(options: OptimizeOptions): Promise<void> {
   // Override config with CLI options
   config.minOccurrences = parseInt(options.minOccurrences, 10);
   config.minClasses = parseInt(options.minClasses, 10);
+  config.ssr = options.ssr || false;
   config.backup = options.backup || false;
   config.manifest = options.manifest !== false;
   config.verbose = options.verbose || false;
@@ -38,6 +40,10 @@ export async function optimizeCommand(options: OptimizeOptions): Promise<void> {
 
   if (dryRun) {
     console.log(chalk.yellow('🔍 DRY RUN MODE - No files will be modified\n'));
+  }
+
+  if (config.ssr) {
+    console.log(chalk.blue('🔒 SSR MODE - Only transforming patterns found in both HTML and JS\n'));
   }
 
   try {

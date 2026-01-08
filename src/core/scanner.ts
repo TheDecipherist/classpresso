@@ -21,7 +21,7 @@ import {
   DEFAULT_PATTERNS,
   filterExcludedFiles,
 } from '../utils/files.js';
-import { ALL_CLASS_PATTERNS, isDynamicClassString, extractDynamicBaseStrings } from '../utils/regex.js';
+import { ALL_CLASS_PATTERNS, isDynamicClassString, extractDynamicBaseStrings, extractConcatBaseStrings } from '../utils/regex.js';
 
 /**
  * Determine the source file type
@@ -106,6 +106,23 @@ export function containsDynamicPrefix(
     }
   }
   return false;
+}
+
+/**
+ * Check if a class occurrence is safe for SSR hydration.
+ * A pattern is hydration-safe if it appears in BOTH:
+ * - Server context (html or rsc)
+ * - Client context (js)
+ *
+ * If a pattern only appears in one context, transforming it would cause
+ * React hydration mismatches.
+ */
+export function isHydrationSafe(occurrence: ClassOccurrence): boolean {
+  const hasServerContext = occurrence.sourceTypes.has('html') || occurrence.sourceTypes.has('rsc');
+  const hasClientContext = occurrence.sourceTypes.has('js');
+
+  // Must appear in both server and client contexts to be safe
+  return hasServerContext && hasClientContext;
 }
 
 /**
@@ -261,9 +278,17 @@ export async function scanBuildOutput(
       });
 
       // Extract dynamic base patterns from JS files (for hydration safety)
+      // These include template literals with ${} and .concat() calls
       if (isJSFile(filePath)) {
+        // Get bases from template literals: className:`base ${dynamic}`
         const dynamicBases = extractDynamicBaseStrings(content);
-        for (const baseString of dynamicBases) {
+        // Get bases from concat calls: className:"".concat("base", variant)
+        const concatBases = extractConcatBaseStrings(content);
+
+        // Combine all dynamic bases
+        const allDynamicBases = [...dynamicBases, ...concatBases];
+
+        for (const baseString of allDynamicBases) {
           const { normalized, classes } = normalizeClassString(baseString, config.exclude);
 
           // Skip if too few classes
