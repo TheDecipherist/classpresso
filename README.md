@@ -86,6 +86,8 @@ npx classpresso optimize
 
 ## Framework Compatibility
 
+### CSS Frameworks
+
 | Framework | Classes per Element | Performance Gain |
 |-----------|---------------------|------------------|
 | Tailwind CSS | 10-20+ typical | Excellent |
@@ -95,7 +97,17 @@ npx classpresso optimize
 | UnoCSS | 10-20+ typical | Excellent |
 | Any utility CSS | Varies | Automatic |
 
-**Zero code changes required.** Classpresso runs on your build output. Your React, Vue, Svelte, or vanilla HTML stays exactly the same.
+### Build Frameworks
+
+| Framework | Build Directory | SSR Flag |
+|-----------|-----------------|----------|
+| Next.js | `.next` (default) | `--ssr` for App Router |
+| Astro | `dist` | `--ssr` for SSR/Hybrid with islands |
+| Vite | `dist` | Depends on framework |
+| Create React App | `build` | Not needed |
+| Remix | `build` | `--ssr` recommended |
+
+**Zero code changes required.** Classpresso runs on your build output. Your React, Vue, Svelte, Astro, or vanilla HTML stays exactly the same.
 
 ## How It Works
 
@@ -213,6 +225,9 @@ classpresso report --format html > report.html
 
 ### Astro
 
+Classpresso fully supports Astro static, SSR, and hybrid builds.
+
+**Static Build (default):**
 ```json
 {
   "scripts": {
@@ -220,6 +235,32 @@ classpresso report --format html > report.html
   }
 }
 ```
+
+**SSR/Hybrid Build (with React/Vue/Svelte islands):**
+```json
+{
+  "scripts": {
+    "build": "astro build && classpresso optimize --dir dist --ssr"
+  }
+}
+```
+
+**Configuration file:**
+```javascript
+// classpresso.config.js
+module.exports = {
+  buildDir: 'dist',
+  // Use --ssr flag if you have interactive islands with client:* directives
+  ssr: false,
+};
+```
+
+Classpresso automatically detects Astro's build structure:
+- `dist/**/*.html` - Static HTML pages
+- `dist/_astro/**/*.js` - Client-side JavaScript
+- `dist/_astro/**/*.css` - Compiled CSS
+- `dist/server/**/*.mjs` - Server code (SSR mode)
+- `dist/client/_astro/**/*` - Client assets (SSR mode)
 
 ## SSR-Safe Mode
 
@@ -242,7 +283,9 @@ SSR-safe mode only consolidates patterns that appear in **both** server-rendered
 - **Next.js App Router** - Always recommended
 - **Next.js Pages Router** - Usually not needed (different hydration model)
 - **Remix** - Recommended
-- **Static sites (Astro static, plain HTML)** - Not needed
+- **Astro SSR/Hybrid** - Recommended if using `client:*` directives with React/Vue/Svelte islands
+- **Astro Static** - Not needed (no hydration)
+- **Static sites (plain HTML)** - Not needed
 
 ### Configuration
 

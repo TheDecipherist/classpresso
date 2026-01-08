@@ -11,6 +11,7 @@ import type { FileStats } from '../types/index.js';
  * Default file patterns to scan in build output
  */
 export const DEFAULT_PATTERNS = [
+  // === Next.js (.next directory) ===
   // Client-side chunks
   'static/chunks/**/*.js',
   'static/css/**/*.css',
@@ -28,6 +29,19 @@ export const DEFAULT_PATTERNS = [
   'standalone/.next/server/app/**/*.rsc',
   // Standalone server chunks (Client Components)
   'standalone/.next/server/chunks/**/*.js',
+
+  // === Astro (dist directory) ===
+  // Static build - HTML pages
+  '**/*.html',
+  // Static build - Bundled assets
+  '_astro/**/*.js',
+  '_astro/**/*.css',
+  // SSR/Hybrid build - Client assets
+  'client/_astro/**/*.js',
+  'client/_astro/**/*.css',
+  // SSR/Hybrid build - Server code
+  'server/**/*.mjs',
+  'server/chunks/**/*.mjs',
 ];
 
 /**
