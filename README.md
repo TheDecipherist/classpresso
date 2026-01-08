@@ -134,6 +134,7 @@ classpresso analyze --json
 - `-d, --dir <path>` - Build directory (default: `.next`)
 - `--min-occurrences <n>` - Minimum times a pattern must appear (default: `2`)
 - `--min-classes <n>` - Minimum classes in a pattern (default: `2`)
+- `--ssr` - Enable SSR-safe mode for hydration compatibility
 - `--json` - Output as JSON
 - `-v, --verbose` - Verbose output
 
@@ -151,6 +152,7 @@ classpresso optimize --backup
 - `-d, --dir <path>` - Build directory (default: `.next`)
 - `--min-occurrences <n>` - Minimum times a pattern must appear (default: `2`)
 - `--min-classes <n>` - Minimum classes in a pattern (default: `2`)
+- `--ssr` - Enable SSR-safe mode for hydration compatibility
 - `--dry-run` - Show what would be done without making changes
 - `--backup` - Create backup files before modifying
 - `--no-manifest` - Don't generate manifest file
@@ -213,6 +215,38 @@ classpresso report --format html > report.html
 }
 ```
 
+## SSR-Safe Mode
+
+For **Next.js App Router**, **Remix**, or any SSR framework with hydration, use the `--ssr` flag to prevent hydration mismatches:
+
+```bash
+classpresso optimize --ssr
+```
+
+### What it does
+
+SSR-safe mode only consolidates patterns that appear in **both** server-rendered HTML and client-side JavaScript. This ensures the browser sees identical class names during hydration.
+
+**Without `--ssr`:** A pattern in HTML might get consolidated, but the JavaScript bundle still references the original classes → hydration mismatch error.
+
+**With `--ssr`:** Only patterns found in both places are consolidated → perfect hydration.
+
+### When to use
+
+- **Next.js App Router** - Always recommended
+- **Next.js Pages Router** - Usually not needed (different hydration model)
+- **Remix** - Recommended
+- **Static sites (Astro static, plain HTML)** - Not needed
+
+### Configuration
+
+```javascript
+// classpresso.config.js
+module.exports = {
+  ssr: true, // Enable SSR-safe mode
+};
+```
+
 ## Configuration
 
 Create a `classpresso.config.js` file in your project root:
@@ -241,6 +275,9 @@ module.exports = {
 
   // CSS output options
   cssLayer: false,      // Wrap in @layer (e.g., 'utilities') or false for none
+
+  // SSR & Hydration
+  ssr: false,           // Enable SSR-safe mode for hydration compatibility
 
   // Debug options
   dataAttributes: false, // Add data-cp-original attribute with original classes
