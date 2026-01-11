@@ -54,8 +54,8 @@ export function getVersion(): string {
   try {
     // This works in both dev and built versions
     const packageJsonPath = path.resolve(
-      new URL('.', import.meta.url).pathname,
-      '../../package.json'
+      new URL('.', import.meta.url).replace("file:///", "").pathname,
+      '../package.json'
     );
     const packageJson = require(packageJsonPath);
     return packageJson.version || 'unknown';
