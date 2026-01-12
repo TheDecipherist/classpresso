@@ -6,13 +6,14 @@ import { Command } from 'commander';
 import { analyzeCommand } from './analyze.js';
 import { optimizeCommand } from './optimize.js';
 import { reportCommand } from './report.js';
+import { getVersion } from '../utils/logger.js';
 
 const program = new Command();
 
 program
   .name('classpresso')
   .description('CSS class consolidation tool - compress multiple utility classes into single optimized classes')
-  .version('1.0.0');
+  .version(getVersion());
 
 program
   .command('analyze')

@@ -176,15 +176,16 @@ export async function findFiles(
   buildDir: string,
   patterns: string[]
 ): Promise<string[]> {
-  const allFiles: string[] = [];
+  // Create full patterns and deduplicate
+  const globPatterns = [...new Set(patterns.map(p => path.join(buildDir, p)))];
 
-  for (const pattern of patterns) {
-    const fullPattern = path.join(buildDir, pattern);
-    const files = await glob(fullPattern, { nodir: true });
-    allFiles.push(...files);
-  }
+  // Use windowsPathsNoEscape for Windows compatibility
+  const allFiles = await glob(globPatterns, {
+    nodir: true,
+    windowsPathsNoEscape: true
+  });
 
-  // Remove duplicates
+  // Remove duplicates (in case patterns overlap)
   return [...new Set(allFiles)];
 }
 

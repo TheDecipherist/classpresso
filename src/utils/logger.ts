@@ -5,6 +5,7 @@
 
 import { appendFile, writeFile } from 'fs/promises';
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 import path from 'path';
 import os from 'os';
 import type { ClasspressoConfig } from '../types/index.js';
@@ -52,11 +53,10 @@ export interface Logger {
  */
 export function getVersion(): string {
   try {
-    // This works in both dev and built versions
-    const packageJsonPath = path.resolve(
-      new URL('.', import.meta.url).pathname,
-      '../../package.json'
-    );
+    // Use fileURLToPath for cross-platform compatibility (Windows/POSIX)
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const packageJsonPath = path.resolve(__dirname, '../package.json');
     const packageJson = require(packageJsonPath);
     return packageJson.version || 'unknown';
   } catch {
