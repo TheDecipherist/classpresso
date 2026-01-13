@@ -25,6 +25,9 @@ coverage/
 .env
 .env.local
 
+# Local Claude instructions (not for public repo)
+.claude/
+
 # Backup files
 *.bak
 *.classpresso-backup

@@ -1,0 +1,18 @@
+{
+  "name": "classpresso-website-benchmark",
+  "version": "1.0.0",
+  "description": "Full website benchmark with all common sections",
+  "main": "benchmark.js",
+  "scripts": {
+    "generate": "node generate-website.js",
+    "build": "node generate-website.js && npx @tailwindcss/cli -i input.css -o dist/styles.css --content 'dist/**/*.html'",
+    "benchmark": "node benchmark.js"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "playwright": "^1.40.0",
+    "serve": "^14.2.0",
+    "tailwindcss": "^4.1.18"
+  }
+}

@@ -468,6 +468,7 @@ export async function generateConsolidatedCSS(
 
 /**
  * Inject consolidated CSS into the build
+ * Only injects into ONE CSS file (the largest) to avoid duplicating overhead
  */
 export async function injectConsolidatedCSS(
   buildDir: string,
@@ -501,17 +502,33 @@ export async function injectConsolidatedCSS(
     throw new Error('No CSS files found in build output');
   }
 
-  // Inject into all CSS files to ensure both main build and standalone have the CSS
-  const injectedFiles: string[] = [];
+  // Find the largest CSS file to inject into (likely the main stylesheet)
+  // This avoids duplicating the consolidated CSS across multiple files
+  let targetFile = cssFiles[0];
+  let maxSize = 0;
+
   for (const cssFile of cssFiles) {
-    const existingContent = await readFileContent(cssFile);
-    // Don't inject twice if already present
-    if (!existingContent.includes('Classpresso Consolidated')) {
-      const newContent = `${existingContent}\n\n${consolidatedCSS}`;
-      await writeFileContent(cssFile, newContent);
-      injectedFiles.push(cssFile);
+    if (!isCSSFile(cssFile)) continue;
+    try {
+      const content = await readFileContent(cssFile);
+      // Skip if already injected
+      if (content.includes('Classpresso Consolidated')) {
+        return `none (already injected in ${cssFile})`;
+      }
+      const size = Buffer.byteLength(content, 'utf-8');
+      if (size > maxSize) {
+        maxSize = size;
+        targetFile = cssFile;
+      }
+    } catch {
+      // Skip files that can't be read
     }
   }
 
-  return injectedFiles.length > 0 ? injectedFiles.join(', ') : 'none (already injected)';
+  // Inject into the largest CSS file only
+  const existingContent = await readFileContent(targetFile);
+  const newContent = `${existingContent}\n\n${consolidatedCSS}`;
+  await writeFileContent(targetFile, newContent);
+
+  return targetFile;
 }

@@ -1,0 +1,21 @@
+{
+  "name": "classpresso-table-benchmark",
+  "version": "1.0.0",
+  "description": "Benchmark test for classpresso with 100x20 Tailwind table",
+  "main": "benchmark.js",
+  "scripts": {
+    "generate": "node generate-table.js",
+    "serve": "npx serve dist -p 3456",
+    "benchmark": "node benchmark.js"
+  },
+  "keywords": [],
+  "author": "Tim Carter Clausen <tim.clausen.dev@gmail.com>",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "playwright": "^1.40.0",
+    "serve": "^14.2.0",
+    "tailwindcss": "^4.1.18"
+  }
+}
