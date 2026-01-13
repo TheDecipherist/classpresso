@@ -37,3 +37,7 @@ test-site/
 test_libraries/
 marketing/
 docs/
+
+# Benchmarks and test outputs
+benchmarks/
+.playwright-mcp/
