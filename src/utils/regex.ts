@@ -48,6 +48,12 @@ export const CLASS_PATTERNS = {
 
   // Vue/Quasar createElement: class:'...'
   vueCreateElementSingle: /\bclass\s*:\s*'([^']+)'/g,
+
+  // JSX: className=`...` (static template literal, no dynamic expressions)
+  jsxBacktick: /className\s*=\s*`([^`$]+)`/g,
+
+  // React createElement: className:`...` (static template literal, no dynamic expressions)
+  createElementBacktick: /className\s*:\s*`([^`$]+)`/g,
 };
 
 /**
@@ -66,6 +72,8 @@ export const ALL_CLASS_PATTERNS = [
   CLASS_PATTERNS.rscPayload,
   CLASS_PATTERNS.vueCreateElementDouble,
   CLASS_PATTERNS.vueCreateElementSingle,
+  CLASS_PATTERNS.jsxBacktick,
+  CLASS_PATTERNS.createElementBacktick,
 ];
 
 /**
@@ -176,5 +184,8 @@ export function createReplacementPatterns(original: string): RegExp[] {
     // Vue/Quasar class: syntax
     new RegExp(`(\\bclass\\s*:\\s*)"${escaped}"`, 'g'),
     new RegExp(`(\\bclass\\s*:\\s*)'${escaped}'`, 'g'),
+    // Static template literals
+    new RegExp(`(className\\s*=\\s*)\`${escaped}\``, 'g'),
+    new RegExp(`(className\\s*:\\s*)\`${escaped}\``, 'g'),
   ];
 }

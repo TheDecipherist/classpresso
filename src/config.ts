@@ -3,8 +3,27 @@
  */
 
 import { readFileContent } from './utils/files.js';
+import { stat } from 'fs/promises';
+import { existsSync } from 'fs';
 import path from 'path';
 import type { ClasspressoConfig } from './types/index.js';
+
+/**
+ * Build directory candidates in priority order.
+ * When multiple exist, we use the most recently modified.
+ */
+export const BUILD_DIR_CANDIDATES = [
+  '.next',           // Next.js
+  'dist',            // Vite, Angular, generic
+  'build',           // Create React App, Remix, Docusaurus
+  '.output',         // Nuxt 3, Solid Start
+  '.svelte-kit',     // SvelteKit (intermediate)
+  'public',          // Gatsby, Hugo
+  '_site',           // Eleventy
+  'out',             // Next.js static export
+  '.vitepress/dist', // VitePress
+  'web/dist',        // RedwoodJS
+];
 
 /**
  * Default prefixes that indicate dynamically-generated classes from icon/component libraries.
@@ -203,5 +222,106 @@ function isValidHttpsUrl(url: string): boolean {
     return parsed.protocol === 'https:';
   } catch {
     return false;
+  }
+}
+
+/**
+ * Auto-detect build directory from common framework patterns.
+ * Returns the most recently modified build directory if multiple exist.
+ * Returns null if no build directory is found.
+ */
+export async function detectBuildDir(cwd: string = process.cwd()): Promise<{
+  detected: string | null;
+  candidates: string[];
+  suggestion: string | null;
+}> {
+  const foundDirs: Array<{ dir: string; mtime: Date }> = [];
+  const existingCandidates: string[] = [];
+
+  for (const candidate of BUILD_DIR_CANDIDATES) {
+    const fullPath = path.resolve(cwd, candidate);
+
+    if (existsSync(fullPath)) {
+      existingCandidates.push(candidate);
+      try {
+        const stats = await stat(fullPath);
+        if (stats.isDirectory()) {
+          foundDirs.push({ dir: candidate, mtime: stats.mtime });
+        }
+      } catch {
+        // Skip if we can't stat
+      }
+    }
+  }
+
+  // No build directories found
+  if (foundDirs.length === 0) {
+    return {
+      detected: null,
+      candidates: [],
+      suggestion: 'No build directory found. Run your build command first, then try again.',
+    };
+  }
+
+  // Single directory found - use it
+  if (foundDirs.length === 1) {
+    return {
+      detected: foundDirs[0].dir,
+      candidates: existingCandidates,
+      suggestion: null,
+    };
+  }
+
+  // Multiple directories found - use most recently modified
+  foundDirs.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+  const mostRecent = foundDirs[0];
+
+  return {
+    detected: mostRecent.dir,
+    candidates: existingCandidates,
+    suggestion: `Multiple build directories found (${existingCandidates.join(', ')}). Using most recent: ${mostRecent.dir}`,
+  };
+}
+
+/**
+ * Framework hints from package.json dependencies
+ */
+interface FrameworkHint {
+  name: string;
+  buildDir: string;
+}
+
+/**
+ * Try to detect framework from package.json and suggest build directory
+ */
+export async function detectFrameworkHint(cwd: string = process.cwd()): Promise<FrameworkHint | null> {
+  const packageJsonPath = path.resolve(cwd, 'package.json');
+
+  if (!existsSync(packageJsonPath)) {
+    return null;
+  }
+
+  try {
+    const content = await readFileContent(packageJsonPath);
+    const pkg = JSON.parse(content);
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    // Check for frameworks in priority order
+    if (deps['next']) return { name: 'Next.js', buildDir: '.next' };
+    if (deps['nuxt']) return { name: 'Nuxt', buildDir: '.output' };
+    if (deps['@sveltejs/kit']) return { name: 'SvelteKit', buildDir: 'build' };
+    if (deps['astro']) return { name: 'Astro', buildDir: 'dist' };
+    if (deps['@remix-run/react']) return { name: 'Remix', buildDir: 'build' };
+    if (deps['solid-start']) return { name: 'Solid Start', buildDir: '.output' };
+    if (deps['@builder.io/qwik']) return { name: 'Qwik', buildDir: 'dist' };
+    if (deps['gatsby']) return { name: 'Gatsby', buildDir: 'public' };
+    if (deps['@angular/core']) return { name: 'Angular', buildDir: 'dist' };
+    if (deps['vite']) return { name: 'Vite', buildDir: 'dist' };
+    if (deps['@docusaurus/core']) return { name: 'Docusaurus', buildDir: 'build' };
+    if (deps['@11ty/eleventy']) return { name: 'Eleventy', buildDir: '_site' };
+
+    return null;
+  } catch {
+    return null;
   }
 }

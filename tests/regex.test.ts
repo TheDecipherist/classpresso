@@ -136,8 +136,8 @@ describe('CLASS_PATTERNS', () => {
 describe('createReplacementPatterns', () => {
   it('creates patterns for all variants', () => {
     const patterns = createReplacementPatterns('flex gap-2');
-    // 7 base patterns + 2 HTML entity encoded patterns + 2 Vue class: patterns
-    expect(patterns).toHaveLength(11);
+    // 7 base patterns + 2 HTML entity encoded patterns + 2 Vue class: patterns + 2 static backtick patterns
+    expect(patterns).toHaveLength(13);
   });
 
   it('creates working JSX double quote pattern', () => {

@@ -5,14 +5,42 @@
 import chalk from 'chalk';
 import { loadMappingManifest } from '../core/consolidator.js';
 import { formatBytes, formatPercentage, formatTime } from '../core/metrics.js';
+import { detectBuildDir, detectFrameworkHint } from '../config.js';
 
 interface ReportOptions {
-  dir: string;
+  dir?: string;
   format: 'text' | 'json' | 'html';
 }
 
 export async function reportCommand(options: ReportOptions): Promise<void> {
-  const manifest = await loadMappingManifest(options.dir);
+  // Auto-detect build directory if not specified
+  let buildDir = options.dir;
+
+  if (!buildDir) {
+    const detection = await detectBuildDir();
+    if (detection.detected) {
+      buildDir = detection.detected;
+      if (options.format !== 'json') {
+        console.log(chalk.gray(`Auto-detected build directory: ${buildDir}`));
+        if (detection.suggestion) {
+          console.log(chalk.yellow(detection.suggestion));
+        }
+      }
+    } else {
+      const hint = await detectFrameworkHint();
+      if (hint) {
+        console.error(chalk.red(`No build directory found.`));
+        console.log(chalk.yellow(`Detected ${hint.name} project. Expected build directory: ${hint.buildDir}`));
+        console.log(chalk.gray(`Run your build command first, then try again.`));
+      } else {
+        console.error(chalk.red('No build directory found and could not auto-detect.'));
+        console.log(chalk.gray('Use --dir to specify your build directory, or run your build command first.'));
+      }
+      process.exit(1);
+    }
+  }
+
+  const manifest = await loadMappingManifest(buildDir);
 
   if (!manifest) {
     console.error(chalk.red('No classpresso manifest found in build directory.'));

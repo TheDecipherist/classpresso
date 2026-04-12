@@ -224,8 +224,10 @@ async function transformFile(
     const isJS = isJSFile(filePath);
 
     for (const mapping of mappings) {
-      // Skip patterns that would cause hydration mismatches
-      if (dynamicBasePatterns.size > 0) {
+      // Skip patterns that would cause hydration mismatches (SSR mode only)
+      // In non-SSR builds there is no server-rendered HTML to reconcile against,
+      // so template-literal base patterns pose no hydration risk.
+      if (config.ssr && dynamicBasePatterns.size > 0) {
         // Skip if the pattern is a superset of OR exactly matches a dynamic base
         // This prevents hydration mismatches in React/Next.js where:
         // - HTML has rendered result: "px-4 py-2 bg-blue" (superset of base)
@@ -241,13 +243,14 @@ async function transformFile(
         }
       }
 
-      // Skip mergeable patterns in JS files (non-SSR mode only)
+      // Skip mergeable patterns in JS files (SSR mode only)
       // These are patterns that appear in JS as className props but get merged
-      // with component-internal classes in the HTML output.
-      // NOTE: In SSR mode, mergeable patterns are filtered at pattern detection time
-      // (pattern-detector.ts) to ensure consistent transformation across all files.
-      // This skip logic is primarily for non-SSR mode backward compatibility.
-      if (isJS && mergeablePatterns.has(mapping.original)) {
+      // with component-internal classes in the HTML output during SSR.
+      // In non-SSR builds, className props are applied client-side only and
+      // there is no server-rendered HTML to cause a mismatch.
+      // NOTE: In SSR mode, mergeable patterns are also filtered at pattern detection
+      // time (pattern-detector.ts) to ensure consistent transformation across files.
+      if (config.ssr && isJS && mergeablePatterns.has(mapping.original)) {
         skippedForHydration++;
         continue;
       }

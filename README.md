@@ -1,3 +1,5 @@
+[![classpresso.com](https://img.shields.io/badge/🌐_classpresso.com-5b21b6?style=for-the-badge)](https://classpresso.com)
+
 # Classpresso
 
 > **Make utility-first CSS render faster** — 50% faster style recalculation, 42% faster First Paint
@@ -81,12 +83,14 @@ npm install classpresso --save-dev
 # Build your project first
 npm run build
 
-# Analyze potential savings
+# Analyze potential savings (auto-detects build directory)
 npx classpresso analyze
 
 # Apply optimizations
 npx classpresso optimize
 ```
+
+Classpresso **auto-detects** your build directory (`.next`, `dist`, `build`, `.output`, etc.), so you usually don't need to specify `--dir`.
 
 ## Framework Compatibility
 
@@ -160,18 +164,21 @@ Classpresso works with **20+ frameworks** out of the box:
 
 ## CLI Commands
 
+All commands **auto-detect** your build directory. You can override with `--dir` if needed.
+
 ### `classpresso analyze`
 
 Analyze build output and show potential optimizations without modifying files.
 
 ```bash
-classpresso analyze --dir .next
+classpresso analyze                        # Auto-detects build dir
+classpresso analyze --dir dist             # Explicit build dir
 classpresso analyze --min-occurrences 3 --min-classes 3
 classpresso analyze --json
 ```
 
 **Options:**
-- `-d, --dir <path>` - Build directory (default: `.next`)
+- `-d, --dir <path>` - Build directory (auto-detected if not specified)
 - `--min-occurrences <n>` - Minimum times a pattern must appear (default: `2`)
 - `--min-classes <n>` - Minimum classes in a pattern (default: `2`)
 - `--ssr` - Enable SSR-safe mode for hydration compatibility
@@ -186,70 +193,155 @@ classpresso analyze --json
 Apply optimizations to the build output.
 
 ```bash
-classpresso optimize --dir .next
+classpresso optimize                       # Auto-detects build dir
+classpresso optimize --dir .next           # Explicit build dir
 classpresso optimize --dry-run
 classpresso optimize --backup
+classpresso optimize --purge-unused        # Also remove unused CSS
 ```
 
 **Options:**
-- `-d, --dir <path>` - Build directory (default: `.next`)
+- `-d, --dir <path>` - Build directory (auto-detected if not specified)
 - `--min-occurrences <n>` - Minimum times a pattern must appear (default: `2`)
 - `--min-classes <n>` - Minimum classes in a pattern (default: `2`)
 - `--ssr` - Enable SSR-safe mode for hydration compatibility
 - `--dry-run` - Show what would be done without making changes
 - `--backup` - Create backup files before modifying
 - `--no-manifest` - Don't generate manifest file
+- `--purge-unused` - Remove unused CSS classes after consolidation
 - `-v, --verbose` - Verbose output
 - `--debug` - Generate detailed debug log file for troubleshooting
 - `--send-error-reports` - Send error reports to configured webhook
 - `--error-report-url <url>` - Webhook URL for error reports
+
+### `classpresso validate`
+
+Check for hydration safety issues before optimizing. Catches potential React/Vue/Svelte hydration mismatches.
+
+```bash
+classpresso validate                       # Auto-detects build dir
+classpresso validate --dir .next
+classpresso validate --json
+```
+
+**Example output:**
+```
+☕ Classpresso - Hydration Safety Validator
+
+📊 Hydration Safety Summary
+
+  Patterns analyzed:    22
+  Hydration-safe:       17
+  Server-only:          3
+  Client-only:          2
+  Mergeable (props):    1
+
+⚠️  Found 5 patterns that may cause hydration issues:
+
+  1. "flex items-center gap-4"
+     Status: SERVER-ONLY
+     Location: server/page.html:47
+     Fix: This pattern only appears in server-rendered HTML...
+
+💡 Recommendations
+
+  ⚠️  Mixed server/client patterns detected.
+     Use "classpresso optimize --ssr" to only consolidate safe patterns.
+```
+
+**Options:**
+- `-d, --dir <path>` - Build directory (auto-detected if not specified)
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `--debug` - Generate detailed debug log file for troubleshooting
+
+### `classpresso unused`
+
+Analyze CSS for unused classes. Find dead CSS that can be removed.
+
+```bash
+classpresso unused                         # Auto-detects build dir
+classpresso unused --dir dist
+classpresso unused --verbose               # Show file breakdown
+classpresso unused --json
+```
+
+**Example output:**
+```
+☕ Classpresso - Unused CSS Analyzer
+
+📊 Summary
+
+  CSS files scanned:    3
+  Total CSS rules:      1,247
+  Classes used:         892
+  Classes unused:       47
+
+💾 Size Impact
+
+  Unused CSS bytes:     12,340 (12.1 KB)
+  Gzip estimate:        3,120 (3.0 KB)
+
+🔝 Top 10 Unused Classes (by size)
+
+  1. hover\:bg-gradient-to-r                           234 B
+  2. focus\:ring-offset-4                              189 B
+  ...
+
+💡 Recommendations
+
+  ⚠️  Found 12.1 KB of unused CSS.
+     Run "classpresso optimize --purge-unused" to remove these classes.
+```
+
+**Options:**
+- `-d, --dir <path>` - Build directory (auto-detected if not specified)
+- `--limit <n>` - Number of top unused classes to show (default: `20`)
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output (show file breakdown)
+- `--debug` - Generate detailed debug log file for troubleshooting
 
 ### `classpresso report`
 
 Generate a report from an existing manifest.
 
 ```bash
+classpresso report                         # Auto-detects build dir
 classpresso report --dir .next
 classpresso report --format json
 classpresso report --format html > report.html
 ```
 
 **Options:**
-- `-d, --dir <path>` - Build directory (default: `.next`)
+- `-d, --dir <path>` - Build directory (auto-detected if not specified)
 - `--format <type>` - Output format: `text`, `json`, `html` (default: `text`)
 
 ## Integration Examples
+
+With auto-detection, most integrations are now simpler:
 
 ### Next.js
 
 ```json
 {
   "scripts": {
-    "build": "next build && classpresso optimize",
+    "build": "next build && classpresso optimize --ssr",
     "build:analyze": "next build && classpresso analyze"
   }
 }
 ```
 
-### Vite
+### Vite / Create React App / Generic
 
 ```json
 {
   "scripts": {
-    "build": "vite build && classpresso optimize --dir dist"
+    "build": "vite build && classpresso optimize"
   }
 }
 ```
 
-### Create React App
-
-```json
-{
-  "scripts": {
-    "build": "react-scripts build && classpresso optimize --dir build"
-  }
-}
-```
+Classpresso auto-detects `dist`, `build`, or your framework's output directory.
 
 ### Astro
 
@@ -405,6 +497,16 @@ For **Next.js App Router**, **Remix**, or any SSR framework with hydration, use 
 ```bash
 classpresso optimize --ssr
 ```
+
+### Check Before You Optimize
+
+Use the `validate` command to detect potential hydration issues before optimizing:
+
+```bash
+classpresso validate
+```
+
+This shows which patterns are safe to consolidate and which might cause issues. If you see warnings, use `--ssr` mode.
 
 ### What it does
 
