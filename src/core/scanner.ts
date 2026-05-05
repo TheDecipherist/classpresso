@@ -126,6 +126,30 @@ export function isHydrationSafe(occurrence: ClassOccurrence): boolean {
 }
 
 /**
+ * Returns true for classes whose CSS rule cannot be expressed as flat declarations
+ * on a single-class selector — i.e., classes that require a media query wrapper,
+ * an @container wrapper, or a combinator child selector to function correctly.
+ *
+ * Consolidating these into a plain `.cp-xxx { ... }` rule silently drops the
+ * wrapping context, producing a visually broken build with no warning.
+ *
+ * Detected categories:
+ *  - Any variant prefix:    md:, hover:, dark:, focus:, group-hover:, data-[x]:, etc.
+ *  - Container queries:     @sm, @md, @[800px], etc.
+ *  - Combinator utilities:  space-x-*, space-y-*, divide-x-*, divide-y-*
+ */
+export function isNonFlattenableClass(className: string): boolean {
+  // Variant prefixes — any colon in the class name means it needs a wrapper
+  if (className.includes(':')) return true;
+  // Container queries
+  if (className.startsWith('@')) return true;
+  // Combinator utilities that generate child selectors like `.space-y-6 > :not(:last-child)`
+  if (/^space-[xy]/.test(className)) return true;
+  if (/^divide-[xy]/.test(className)) return true;
+  return false;
+}
+
+/**
  * Check if a class should be excluded based on config
  */
 export function shouldExcludeClass(
@@ -170,14 +194,15 @@ export function shouldExcludeClass(
  */
 export function normalizeClassString(
   classString: string,
-  exclude: ClasspressoConfig['exclude']
+  exclude: ClasspressoConfig['exclude'],
+  excludeNonFlattenable: boolean = false
 ): { normalized: string; classes: string[]; excludedClasses: string[] } {
   const allClasses = classString.split(/\s+/).filter(Boolean);
   const includedClasses: string[] = [];
   const excludedClasses: string[] = [];
 
   for (const cls of allClasses) {
-    if (shouldExcludeClass(cls, exclude)) {
+    if (shouldExcludeClass(cls, exclude) || (excludeNonFlattenable && isNonFlattenableClass(cls))) {
       excludedClasses.push(cls);
     } else {
       includedClasses.push(cls);
@@ -291,7 +316,7 @@ export async function scanBuildOutput(
         const allDynamicBases = [...dynamicBases, ...concatBases];
 
         for (const baseString of allDynamicBases) {
-          const { normalized, classes } = normalizeClassString(baseString, config.exclude);
+          const { normalized, classes } = normalizeClassString(baseString, config.exclude, config.excludeNonFlattenableClasses);
 
           // Skip if too few classes
           if (classes.length < config.minClasses) continue;
@@ -316,7 +341,8 @@ export async function scanBuildOutput(
       for (const { classString, location } of classStrings) {
         const { normalized, classes, excludedClasses } = normalizeClassString(
           classString,
-          config.exclude
+          config.exclude,
+          config.excludeNonFlattenableClasses
         );
 
         // Skip if all classes were excluded

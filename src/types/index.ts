@@ -50,6 +50,12 @@ export interface ClasspressoConfig {
   purgeUnusedCSS: boolean;
   /** Safelist of class patterns to never purge */
   purgeSafelist?: (string | RegExp)[];
+  /** Automatically exclude classes that cannot be expressed as flat CSS properties (default: true).
+   * Covers: variant prefixes (md:, hover:, dark:, etc.), container queries (@sm, @[800px]),
+   * and combinator utilities (space-y-*, divide-x-*).
+   * When true, these classes are added to excludedClasses; with skipPatternsWithExcludedClasses
+   * also true (default), patterns containing them are skipped entirely — no silent CSS loss. */
+  excludeNonFlattenableClasses: boolean;
 }
 
 // File location tracking

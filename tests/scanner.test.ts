@@ -10,6 +10,7 @@ import {
   containsDynamicPrefix,
   isProperSubset,
   detectMergeablePatterns,
+  isNonFlattenableClass,
 } from '../src/core/scanner.js';
 import { extractDynamicBaseStrings } from '../src/utils/regex.js';
 import { DEFAULT_DYNAMIC_PREFIXES } from '../src/config.js';
@@ -237,6 +238,98 @@ describe('isProperSubset', () => {
     expect(isProperSubset([], ['h-4', 'w-4'])).toBe(true); // Empty is subset of any non-empty
     expect(isProperSubset(['h-4'], [])).toBe(false);
     expect(isProperSubset([], [])).toBe(false); // Empty is not proper subset of empty
+  });
+});
+
+describe('isNonFlattenableClass', () => {
+  it('flags responsive variant prefixes', () => {
+    expect(isNonFlattenableClass('md:px-6')).toBe(true);
+    expect(isNonFlattenableClass('lg:flex')).toBe(true);
+    expect(isNonFlattenableClass('sm:hidden')).toBe(true);
+    expect(isNonFlattenableClass('xl:text-lg')).toBe(true);
+    expect(isNonFlattenableClass('2xl:gap-4')).toBe(true);
+  });
+
+  it('flags pseudo-class variants', () => {
+    expect(isNonFlattenableClass('hover:bg-blue-500')).toBe(true);
+    expect(isNonFlattenableClass('focus:ring-2')).toBe(true);
+    expect(isNonFlattenableClass('dark:text-white')).toBe(true);
+    expect(isNonFlattenableClass('group-hover:opacity-100')).toBe(true);
+    expect(isNonFlattenableClass('peer-focus:border-blue')).toBe(true);
+  });
+
+  it('flags arbitrary variant prefixes', () => {
+    expect(isNonFlattenableClass('data-[state=open]:flex')).toBe(true);
+    expect(isNonFlattenableClass('aria-[expanded=true]:block')).toBe(true);
+  });
+
+  it('flags container query classes', () => {
+    expect(isNonFlattenableClass('@sm')).toBe(true);
+    expect(isNonFlattenableClass('@md')).toBe(true);
+    expect(isNonFlattenableClass('@[800px]')).toBe(true);
+  });
+
+  it('flags combinator-based space utilities', () => {
+    expect(isNonFlattenableClass('space-y-6')).toBe(true);
+    expect(isNonFlattenableClass('space-x-4')).toBe(true);
+    expect(isNonFlattenableClass('space-y-reverse')).toBe(true);
+    expect(isNonFlattenableClass('space-x-reverse')).toBe(true);
+  });
+
+  it('flags combinator-based divide utilities', () => {
+    expect(isNonFlattenableClass('divide-y-2')).toBe(true);
+    expect(isNonFlattenableClass('divide-x-4')).toBe(true);
+    expect(isNonFlattenableClass('divide-y-reverse')).toBe(true);
+  });
+
+  it('does not flag regular flat utility classes', () => {
+    expect(isNonFlattenableClass('flex')).toBe(false);
+    expect(isNonFlattenableClass('px-4')).toBe(false);
+    expect(isNonFlattenableClass('gap-2')).toBe(false);
+    expect(isNonFlattenableClass('text-lg')).toBe(false);
+    expect(isNonFlattenableClass('bg-blue-500')).toBe(false);
+    expect(isNonFlattenableClass('rounded-md')).toBe(false);
+    expect(isNonFlattenableClass('hidden')).toBe(false);
+    expect(isNonFlattenableClass('items-center')).toBe(false);
+  });
+
+  it('does not flag non-combinator space/divide classes', () => {
+    // space-between etc. are flat — they're not combinator-based
+    expect(isNonFlattenableClass('justify-between')).toBe(false);
+    // divide-color classes (divide-gray-200) are flat
+    expect(isNonFlattenableClass('divide-gray-200')).toBe(false);
+  });
+});
+
+describe('normalizeClassString with excludeNonFlattenable', () => {
+  const exclude: ExcludeConfig = {
+    prefixes: ['js-'],
+    suffixes: [],
+    classes: [],
+    patterns: [],
+  };
+
+  it('moves variant classes to excludedClasses when excludeNonFlattenable is true', () => {
+    const result = normalizeClassString('space-y-6 px-4 md:px-6', exclude, true);
+    expect(result.classes).toEqual(['px-4']);
+    expect(result.excludedClasses).toEqual(expect.arrayContaining(['space-y-6', 'md:px-6']));
+  });
+
+  it('includes variant classes normally when excludeNonFlattenable is false', () => {
+    const result = normalizeClassString('space-y-6 px-4 md:px-6', exclude, false);
+    expect(result.classes).toEqual(expect.arrayContaining(['space-y-6', 'px-4', 'md:px-6']));
+    expect(result.excludedClasses).toHaveLength(0);
+  });
+
+  it('defaults to not excluding non-flattenable classes (backward compatible)', () => {
+    const result = normalizeClassString('space-y-6 px-4 md:px-6', exclude);
+    expect(result.classes).toEqual(expect.arrayContaining(['space-y-6', 'px-4', 'md:px-6']));
+  });
+
+  it('combines config-based and non-flattenable exclusions', () => {
+    const result = normalizeClassString('js-click flex md:flex hover:bg-blue', exclude, true);
+    expect(result.classes).toEqual(['flex']);
+    expect(result.excludedClasses).toEqual(expect.arrayContaining(['js-click', 'md:flex', 'hover:bg-blue']));
   });
 });
 

@@ -76,6 +76,7 @@ export const DEFAULT_CONFIG: ClasspressoConfig = {
   debug: false,
   sendErrorReports: false,
   errorReportUrl: undefined,
+  excludeNonFlattenableClasses: true,
   purgeUnusedCSS: false,
   purgeSafelist: [
     /^js-/,      // JavaScript hooks

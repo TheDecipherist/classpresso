@@ -5,6 +5,7 @@
 import postcss from 'postcss';
 import type { ClassMapping } from '../types/index.js';
 import { readFileContent, writeFileContent, findFiles, isCSSFile } from '../utils/files.js';
+import { isNonFlattenableClass } from './scanner.js';
 
 // Map of Tailwind utility prefixes to CSS properties
 const UTILITY_PROPERTY_MAP: Record<string, string | string[]> = {
@@ -432,6 +433,7 @@ export async function generateConsolidatedCSS(
 
   for (const mapping of mappings) {
     const declarations: string[] = [];
+    const lossyClasses: string[] = [];
 
     for (const className of mapping.classes) {
       // Try to get from extracted utilities first
@@ -445,7 +447,23 @@ export async function generateConsolidatedCSS(
       const parsed = parseUtilityClass(className);
       if (parsed.length > 0) {
         declarations.push(...parsed);
+        continue;
       }
+
+      // Class produced no CSS — if it's a non-flattenable class this is silent data loss
+      if (isNonFlattenableClass(className)) {
+        lossyClasses.push(className);
+      }
+    }
+
+    if (lossyClasses.length > 0) {
+      console.warn(
+        `[classpresso] WARNING: Lossy consolidation detected for "${mapping.original}" → "${mapping.consolidated}". ` +
+        `The following classes require media query, container query, or combinator selectors that cannot be ` +
+        `expressed as flat CSS and have been silently dropped: ${lossyClasses.join(', ')}. ` +
+        `To fix: set excludeNonFlattenableClasses: true in your classpresso.config (it is true by default) ` +
+        `or add these classes to exclude.patterns.`
+      );
     }
 
     // Remove duplicates
