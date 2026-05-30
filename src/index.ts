@@ -27,6 +27,8 @@ export { detectConsolidatablePatterns, getPatternSummary } from './core/pattern-
 export { createClassMappings, saveMappingManifest, loadMappingManifest, buildReplacementMap } from './core/consolidator.js';
 export { generateConsolidatedCSS, injectConsolidatedCSS, parseUtilityClass } from './core/css-generator.js';
 export { transformBuildOutput } from './core/transformer.js';
+export { captureAssetHashes, rehashAssets, detectContentHash } from './core/rehasher.js';
+export type { RehashResult, RehashRename } from './core/rehasher.js';
 export { calculateMetrics, estimateCSSOverhead, formatBytes, formatPercentage, formatTime } from './core/metrics.js';
 
 // Configuration

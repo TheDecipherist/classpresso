@@ -78,6 +78,7 @@ export const DEFAULT_CONFIG: ClasspressoConfig = {
   errorReportUrl: undefined,
   excludeNonFlattenableClasses: true,
   purgeUnusedCSS: false,
+  rehashAssets: true,
   purgeSafelist: [
     /^js-/,      // JavaScript hooks
     /^data-/,    // Data attributes used as classes

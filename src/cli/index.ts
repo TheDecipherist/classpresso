@@ -42,6 +42,7 @@ program
   .option('--backup', 'Create backup before modifying')
   .option('--no-manifest', 'Do not generate manifest file')
   .option('--purge-unused', 'Remove unused CSS classes after consolidation')
+  .option('--no-rehash', 'Do not re-hash content-hashed assets after rewriting (keeps original filenames)')
   .option('-v, --verbose', 'Verbose output')
   .option('--debug', 'Enable debug mode (generates detailed log file)')
   .option('--send-error-reports', 'Send error reports to configured webhook')

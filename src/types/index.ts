@@ -56,6 +56,10 @@ export interface ClasspressoConfig {
    * When true, these classes are added to excludedClasses; with skipPatternsWithExcludedClasses
    * also true (default), patterns containing them are skipped entirely — no silent CSS loss. */
   excludeNonFlattenableClasses: boolean;
+  /** Re-hash content-hashed assets after rewriting so the filename hash reflects the
+   * served content, preserving the immutable long-term caching contract (default: true).
+   * Renames modified hash-named JS/CSS assets and rewrites all references to them. */
+  rehashAssets: boolean;
 }
 
 // File location tracking

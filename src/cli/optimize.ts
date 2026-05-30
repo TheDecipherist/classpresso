@@ -10,6 +10,7 @@ import { createClassMappings, saveMappingManifest } from '../core/consolidator.j
 import { generateConsolidatedCSS, injectConsolidatedCSS } from '../core/css-generator.js';
 import { transformBuildOutput } from '../core/transformer.js';
 import { purgeUnusedCSS } from '../core/css-purger.js';
+import { captureAssetHashes, rehashAssets } from '../core/rehasher.js';
 import { calculateMetrics, estimateCSSOverhead, formatBytes, formatPercentage, formatTime } from '../core/metrics.js';
 import { loadConfig, detectBuildDir, detectFrameworkHint } from '../config.js';
 import { createLogger } from '../utils/logger.js';
@@ -24,6 +25,7 @@ interface OptimizeOptions {
   backup?: boolean;
   manifest?: boolean;
   purgeUnused?: boolean;
+  rehash?: boolean;
   verbose?: boolean;
   debug?: boolean;
   sendErrorReports?: boolean;
@@ -69,6 +71,8 @@ export async function optimizeCommand(options: OptimizeOptions): Promise<void> {
   config.sendErrorReports = options.sendErrorReports || config.sendErrorReports || false;
   config.errorReportUrl = options.errorReportUrl || config.errorReportUrl;
   config.purgeUnusedCSS = options.purgeUnused || config.purgeUnusedCSS || false;
+  // --no-rehash sets options.rehash to false (Commander negates --no-* flags).
+  config.rehashAssets = options.rehash === false ? false : (config.rehashAssets !== false);
 
   const dryRun = options.dryRun || false;
 
@@ -148,6 +152,11 @@ export async function optimizeCommand(options: OptimizeOptions): Promise<void> {
     await logger.logStep('CSS generated', { cssBytes });
     console.log(chalk.green(`  ✓ Generated ${formatBytes(cssBytes)} of CSS\n`));
 
+    // Snapshot asset content hashes BEFORE any mutation so we can re-hash only what changes.
+    const assetHashSnapshot = (config.rehashAssets && !dryRun)
+      ? await captureAssetHashes(config)
+      : null;
+
     // Step 5: Transform build output
     console.log(chalk.gray('Transforming build output...'));
     const transformStartTime = Date.now();
@@ -204,6 +213,38 @@ export async function optimizeCommand(options: OptimizeOptions): Promise<void> {
 
       if (purgeResult.errors.length > 0 && config.verbose) {
         for (const error of purgeResult.errors) {
+          console.log(chalk.yellow(`  ⚠ ${error}`));
+        }
+      }
+    }
+
+    // Step 7.5: Re-hash modified content-hashed assets (if enabled and not dry run)
+    // Restores the cache-busting contract so immutable long-term caching stays correct.
+    if (config.rehashAssets && !dryRun && assetHashSnapshot) {
+      console.log(chalk.gray('Re-hashing modified assets...'));
+      const rehashStartTime = Date.now();
+      await logger.logStep('Re-hashing assets');
+      const rehashResult = await rehashAssets(config, assetHashSnapshot);
+      await logger.logTiming('Re-hash', Date.now() - rehashStartTime);
+      await logger.logStep('Re-hash complete', {
+        renamed: rehashResult.renamed.length,
+        filesUpdated: rehashResult.filesUpdated,
+        errors: rehashResult.errors.length,
+      });
+
+      if (rehashResult.renamed.length > 0) {
+        console.log(chalk.green(`  ✓ Re-hashed ${rehashResult.renamed.length} assets, updated references in ${rehashResult.filesUpdated} files\n`));
+        if (config.verbose) {
+          for (const r of rehashResult.renamed) {
+            console.log(chalk.gray(`    ${r.fromName} → ${r.toName}`));
+          }
+        }
+      } else {
+        console.log(chalk.gray(`  ✓ No content-hashed assets needed re-hashing\n`));
+      }
+
+      if (rehashResult.errors.length > 0) {
+        for (const error of rehashResult.errors) {
           console.log(chalk.yellow(`  ⚠ ${error}`));
         }
       }

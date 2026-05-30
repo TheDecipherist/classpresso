@@ -209,10 +209,19 @@ classpresso optimize --purge-unused        # Also remove unused CSS
 - `--backup` - Create backup files before modifying
 - `--no-manifest` - Don't generate manifest file
 - `--purge-unused` - Remove unused CSS classes after consolidation
+- `--no-rehash` - Don't re-hash content-hashed assets (see Content-Hashed Assets below)
 - `-v, --verbose` - Verbose output
 - `--debug` - Generate detailed debug log file for troubleshooting
 - `--send-error-reports` - Send error reports to configured webhook
 - `--error-report-url <url>` - Webhook URL for error reports
+
+#### Content-Hashed Assets and Immutable Caching
+
+Bundlers like Vite, Rollup, and webpack name output files after a hash of their content (`index-a1b2c3d4.css`), and those files are usually served with `Cache-Control: immutable` for long-term caching. Because `optimize` rewrites files in place, the served content changes while the filename hash does not - so a returning browser keeps serving the stale cached copy after a redeploy, breaking styling.
+
+To prevent this, `optimize` re-hashes every content-hashed asset it modifies: the file is renamed to a new content-hash filename and every reference to it (HTML, JS, CSS `url()`, bundler manifests) is rewritten. The naming is deterministic, so identical input produces identical output. This is **on by default** and only renames files whose names already look like content hashes; stable names like `styles.css` are never touched.
+
+Pass `--no-rehash` to keep the original filenames (for example, if you run `optimize` before the bundler applies its hashing step).
 
 ### `classpresso validate`
 
